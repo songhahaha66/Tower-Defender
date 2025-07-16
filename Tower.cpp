@@ -1,5 +1,7 @@
 #include "Tower.h"
-#include <cmath>
+#include <iostream>
+// 声明透明图片显示函数
+extern void putimage_alpha(int x, int y, IMAGE* img);
 
 // 静态成员初始化
 IMAGE Tower::towerWithBullet;
@@ -7,7 +9,8 @@ IMAGE Tower::towerWithoutBullet;
 bool Tower::imagesLoaded = false;
 
 Tower::Tower(int x, int y, int dmg, int rng, int rate)
-    : GameObject(x, y, 40, 40), damage(dmg), range(rng), fireRate(rate), fireCountdown(0), hasBullet(true) {
+    : GameObject(x, y, 40, 40), damage(dmg), range(rng), fireRate(rate), fireCountdown(0), 
+      hasBullet(true) {
     
     // 确保图片已加载
     if (!imagesLoaded) {
@@ -16,44 +19,47 @@ Tower::Tower(int x, int y, int dmg, int rng, int rate)
 }
 
 void Tower::loadImages() {
-    if (!imagesLoaded) {
-        loadimage(&towerWithBullet, _T("images/tower.png"));
-        loadimage(&towerWithoutBullet, _T("images/tower_without_bullet.png"));
+    // 无论之前是否加载过，都重新加载以确保图像有效
+    loadimage(&towerWithBullet, _T("images/tower.png"),70,70);
+    loadimage(&towerWithoutBullet, _T("images/tower_without_bullet.png"),70,70);
+    
+    // 检查图像是否成功加载
+    if (towerWithBullet.getwidth() > 0 && towerWithBullet.getheight() > 0 && 
+        towerWithoutBullet.getwidth() > 0 && towerWithoutBullet.getheight() > 0) {
         imagesLoaded = true;
+    } else {
+        // 如果加载失败，输出错误信息（实际生产环境可以使用日志系统）
+        TCHAR error[128];
+        _stprintf_s(error, _T("加载防御塔图像失败，请检查图像文件路径！"));
+        outtextxy(10, 10, error);
     }
 }
 
 void Tower::draw() {
-    // 根据是否有子弹状态选择图片
-    if (hasBullet) {
-        putimage(x, y, &towerWithBullet);
-    } else {
-        putimage(x, y, &towerWithoutBullet);
-    }
-
-    // 可选：绘制攻击范围（调试用）
-    // setlinecolor(LIGHTGRAY);
-    // setlinestyle(PS_DOT);
-    // circle(x + width / 2, y + height / 2, range);
-    // setlinestyle(PS_SOLID);
+    // 选择要绘制的图像
+    IMAGE* sourceImg = hasBullet ? &towerWithBullet : &towerWithoutBullet;
+    
+    // 直接绘制防御塔图像
+    putimage_alpha(x, y, sourceImg);
 }
 
 void Tower::update(std::vector<Enemy*>& enemies, std::vector<Bullet*>& bullets) {
+    Enemy* target = findTarget(enemies);
+    
     if (fireCountdown > 0) {
         fireCountdown--;
     }
 
     if (fireCountdown <= 0) {
-        Enemy* target = findTarget(enemies);
         if (target) {
             // 发射子弹时切换到无子弹状态
-            hasBullet = false;
             bullets.push_back(new Bullet(x + width / 2, y + height / 2, damage, 10.0, target));
             fireCountdown = fireRate; // 重置开火倒计时
+            hasBullet = false; // 发射后设置无子弹状态
         }
     } else {
         // 倒计时过半时恢复有子弹状态
-        if (fireCountdown <= fireRate / 2) {
+        if (fireCountdown <= fireRate / 2 && !hasBullet) {
             hasBullet = true;
         }
     }

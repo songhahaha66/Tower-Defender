@@ -1,6 +1,9 @@
 #include "Enemy.h"
 #include <cmath>
 
+// 声明透明图片显示函数
+extern void putimage_alpha(int x, int y, IMAGE* img);
+
 // 静态成员初始化
 IMAGE Enemy::enemy1Image;
 IMAGE Enemy::enemy2Image;
@@ -29,11 +32,11 @@ void Enemy::loadImages() {
 void Enemy::draw() {
     if (!active) return;
 
-    // 根据类型绘制不同的敌人图片
+    // 根据类型绘制不同的敌人图片 - 使用透明渲染
     if (enemyType == 1) {
-        putimage(x, y, &enemy1Image);
+        putimage_alpha(x, y, &enemy1Image);
     } else {
-        putimage(x, y, &enemy2Image);
+        putimage_alpha(x, y, &enemy2Image);
     }
 
     // 绘制血条

@@ -2,9 +2,18 @@
 #include <conio.h> // for _kbhit()
 #include <algorithm> // for std::remove_if
 #include <cmath> // for sin, sqrt
+#pragma comment(lib, "MSIMG32.LIB")  // 需要这个库来支持AlphaBlend
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
 #endif
+
+// 显示透明图片的函数 - 完美解决黑边问题
+void putimage_alpha(int x, int y, IMAGE* img)
+{
+    int w = img->getwidth();
+    int h = img->getheight();
+    AlphaBlend(GetImageHDC(NULL), x, y, w, h, GetImageHDC(img), 0, 0, w, h, { AC_SRC_OVER, 0, 255, AC_SRC_ALPHA });
+}
 
 Game::Game() : money(20000), lives(10), wave(0), enemiesToSpawn(0), spawnTimer(0){}
 
