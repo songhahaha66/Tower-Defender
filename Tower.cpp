@@ -1,5 +1,7 @@
 #include "Tower.h"
 #include <iostream>
+#include <cmath>
+#define M_PI 3.14159265358979323846
 // 声明透明图片显示函数
 extern void putimage_alpha(int x, int y, IMAGE* img);
 
@@ -35,24 +37,23 @@ void Tower::loadImages() {
     }
 }
 
+
 void Tower::draw() {
-    // 选择要绘制的图像
-    IMAGE* sourceImg = hasBullet ? &towerWithBullet : &towerWithoutBullet;
-    
-    // 直接绘制防御塔图像
-    putimage_alpha(x, y, sourceImg);
+    // 简单绘制原图，不旋转
+    putimage_alpha(x, y, hasBullet ? &towerWithBullet : &towerWithoutBullet);
 }
 
 void Tower::update(std::vector<Enemy*>& enemies, std::vector<Bullet*>& bullets) {
     Enemy* target = findTarget(enemies);
     
+    // 射击逻辑
     if (fireCountdown > 0) {
         fireCountdown--;
     }
 
     if (fireCountdown <= 0) {
         if (target) {
-            // 发射子弹时切换到无子弹状态
+            // 简单从防御塔中心发射子弹
             bullets.push_back(new Bullet(x + width / 2, y + height / 2, damage, 10.0, target));
             fireCountdown = fireRate; // 重置开火倒计时
             hasBullet = false; // 发射后设置无子弹状态

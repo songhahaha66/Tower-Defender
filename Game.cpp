@@ -15,7 +15,7 @@ void putimage_alpha(int x, int y, IMAGE* img)
     AlphaBlend(GetImageHDC(NULL), x, y, w, h, GetImageHDC(img), 0, 0, w, h, { AC_SRC_OVER, 0, 255, AC_SRC_ALPHA });
 }
 
-Game::Game() : money(20000), lives(10), wave(0), enemiesToSpawn(0), spawnTimer(0){}
+Game::Game() : gameState(MENU), money(20000), lives(10), wave(0), enemiesToSpawn(0), spawnTimer(0){}
 
 Game::~Game() {
     // Release all dynamically allocated memory
@@ -35,21 +35,27 @@ void Game::init() {
     Bullet::loadImage();
 
     // Initialize enemy movement path
-    enemyPath.push_back({ 0, 100 });
-    enemyPath.push_back({ 200, 100 });
-    enemyPath.push_back({ 200, 400 });
-    enemyPath.push_back({ 600, 400 });
-    enemyPath.push_back({ 600, 200 });
-    enemyPath.push_back({ screenWidth, 200 });
+    generateRandomPath(); // 生成随机路径
 }
 
 void Game::run() {
     init();
 
-    while (lives > 0) {
-        handleInput();
-        update();
-        draw();
+    while (gameState != GAME_OVER) {
+        if (gameState == MENU) {
+            handleMenuInput();
+            drawMenu();
+        } else if (gameState == PLAYING) {
+            handleInput();
+            update();
+            draw();
+            
+            // 检查游戏结束条件
+            if (lives <= 0) {
+                gameState = GAME_OVER;
+            }
+        }
+        
         FlushBatchDraw(); // Flush all drawing commands to screen
         Sleep(16); // Approximately 60 FPS
     }
@@ -99,6 +105,11 @@ void Game::handleInput() {
                 wave++;
                 enemiesToSpawn = 5 + wave * 2; // Each wave adds 2 more enemies
                 spawnTimer = 60; // Shorter preparation time
+                
+                // 只有在wave > 1时才生成新的随机路径（第一波保持初始路径）
+                if (wave > 1) {
+                    generateRandomPath();
+                }
             }
             spacePressed = true;
         }
@@ -111,10 +122,42 @@ void Game::handleInput() {
     while (MouseHit()) { // Process all mouse messages
         m = GetMouseMsg();
         if (m.uMsg == WM_LBUTTONDOWN) {
+            // 左键建塔
             if (money >= 100) { // Tower cost is 100
                 money -= 100;
                 towers.push_back(new Tower(m.x - 20, m.y - 20, 10, 150, 30)); // damage:10, range:150, cooldown:30 frames
             }
+        } else if (m.uMsg == WM_RBUTTONDOWN) {
+            // 右键卖塔
+            for (auto it = towers.begin(); it != towers.end(); ++it) {
+                Tower* tower = *it;
+                // 检查鼠标点击是否在塔的范围内
+                if (m.x >= tower->x && m.x <= tower->x + tower->width &&
+                    m.y >= tower->y && m.y <= tower->y + tower->height) {
+                    money += 50; // 卖塔回收一半价格
+                    delete tower;
+                    towers.erase(it);
+                    break; // 只删除一个塔
+                }
+            }
+        }
+    }
+}
+
+void Game::handleMenuInput() {
+    // 检测鼠标点击或按键开始游戏
+    if (GetAsyncKeyState(VK_SPACE) & 0x8000 || GetAsyncKeyState(VK_RETURN) & 0x8000) {
+        gameState = PLAYING;
+        return;
+    }
+    
+    // 检测鼠标点击
+    MOUSEMSG m;
+    while (MouseHit()) {
+        m = GetMouseMsg();
+        if (m.uMsg == WM_LBUTTONDOWN) {
+            gameState = PLAYING;
+            return;
         }
     }
 }
@@ -190,6 +233,84 @@ void Game::draw() {
     drawUI(); // Draw UI
 }
 
+void Game::drawMenu() {
+    cleardevice();
+    
+    // 绘制背景渐变
+    for (int y = 0; y < screenHeight; y++) {
+        int blue = 30 + (y * 50) / screenHeight; // 蓝色渐变
+        int green = 10 + (y * 20) / screenHeight;
+        setlinecolor(RGB(10, green, blue));
+        line(0, y, screenWidth, y);
+    }
+    
+    // 绘制游戏标题
+    settextcolor(RGB(255, 255, 100)); // 金黄色
+    settextstyle(60, 0, _T("Arial"));
+    TCHAR title[] = _T("Tower Defender");
+    
+    // 计算标题居中位置
+    int titleWidth = textwidth(title);
+    int titleX = (screenWidth - titleWidth) / 2;
+    
+    // 绘制标题阴影
+    settextcolor(RGB(100, 100, 50));
+    outtextxy(titleX + 3, 103, title);
+    
+    // 绘制标题
+    settextcolor(RGB(255, 255, 100));
+    outtextxy(titleX, 100, title);
+    
+    // 绘制副标题
+    settextcolor(RGB(200, 200, 255));
+    settextstyle(24, 0, _T("Arial"));
+    TCHAR subtitle[] = _T("Defend your base from enemy waves!");
+    int subtitleWidth = textwidth(subtitle);
+    int subtitleX = (screenWidth - subtitleWidth) / 2;
+    outtextxy(subtitleX, 180, subtitle);
+    
+    // 绘制开始按钮框
+    setfillcolor(RGB(50, 50, 100));
+    setlinecolor(RGB(100, 100, 200));
+    int buttonX = screenWidth / 2 - 150;
+    int buttonY = 300;
+    int buttonWidth = 300;
+    int buttonHeight = 60;
+    
+    fillrectangle(buttonX, buttonY, buttonX + buttonWidth, buttonY + buttonHeight);
+    rectangle(buttonX, buttonY, buttonX + buttonWidth, buttonY + buttonHeight);
+    
+    // 绘制开始按钮文字
+    settextcolor(RGB(255, 255, 255));
+    settextstyle(32, 0, _T("Arial"));
+    TCHAR startText[] = _T("Start Game");
+    int startWidth = textwidth(startText);
+    int startX = buttonX + (buttonWidth - startWidth) / 2;
+    int startY = buttonY + (buttonHeight - textheight(startText)) / 2;
+    outtextxy(startX, startY, startText);
+    
+    // 绘制操作说明
+    settextcolor(RGB(180, 180, 180));
+    settextstyle(18, 0, _T("Arial"));
+    outtextxy(250, 400, _T("Left Click: Build Tower ($100)"));
+    outtextxy(250, 430, _T("Right Click: Sell Tower ($50)"));
+    outtextxy(250, 460, _T("Space: Start/Next Wave"));
+    
+    // 绘制提示文字
+    settextcolor(RGB(255, 255, 150));
+    settextstyle(20, 0, _T("Arial"));
+    
+    // 创建闪烁效果
+    static int blinkTimer = 0;
+    blinkTimer++;
+    if ((blinkTimer / 30) % 2 == 0) { // 每秒闪烁一次
+        TCHAR prompt[] = _T("Press SPACE, ENTER or Click to Start");
+        int promptWidth = textwidth(prompt);
+        int promptX = (screenWidth - promptWidth) / 2;
+        outtextxy(promptX, 520, prompt);
+    }
+}
+
 void Game::drawBackground() {
     // Create a gradient background
     for (int y = 0; y < screenHeight; y++) {
@@ -206,27 +327,11 @@ void Game::drawBackground() {
         int x = (i * 73 + 50) % (screenWidth - 40);
         int y = (i * 97 + 80) % (screenHeight - 60);
         
-        // Avoid drawing on the path
-        bool onPath = false;
-        for (size_t j = 0; j < enemyPath.size() - 1; j++) {
-            int px1 = enemyPath[j].x, py1 = enemyPath[j].y;
-            int px2 = enemyPath[j + 1].x, py2 = enemyPath[j + 1].y;
-            
-            // Simple distance check from point to line segment
-            if ((abs(y - py1) < 40 && x >= min(px1, px2) - 40 && x <= max(px1, px2) + 40) ||
-                (abs(x - px1) < 40 && y >= min(py1, py2) - 40 && y <= max(py1, py2) + 40)) {
-                onPath = true;
-                break;
-            }
-        }
-        
-        if (!onPath) {
-            // Draw a simple tree
-            fillcircle(x, y, 8 + i % 5); // Tree crown
-            setfillcolor(RGB(101, 67, 33)); // Brown
-            fillrectangle(x - 2, y + 5, x + 2, y + 15); // Tree trunk
-            setfillcolor(RGB(34, 139, 34)); // Reset to green
-        }
+        // Draw a simple tree
+        fillcircle(x, y, 8 + i % 5); // Tree crown
+        setfillcolor(RGB(101, 67, 33)); // Brown
+        fillrectangle(x - 2, y + 5, x + 2, y + 15); // Tree trunk
+        setfillcolor(RGB(34, 139, 34)); // Reset to green
     }
 }
 
@@ -335,18 +440,86 @@ void Game::drawUI() {
     }
     settextstyle(16, 0, _T("Arial"));
     outtextxy(15, 100, _T("Tower Cost: $100"));
-    outtextxy(15, 120, _T("Click to build"));
+    outtextxy(15, 120, _T("Left click to build"));
+    
+    // 卖塔说明
+    settextcolor(RGB(200, 200, 100));
+    outtextxy(15, 140, _T("Right click to sell ($50)"));
     
     // Draw mini map or game status
     if (!enemies.empty()) {
         settextcolor(RGB(255, 200, 100));
         settextstyle(14, 0, _T("Arial"));
         _stprintf_s(s, _T("Enemies: %d"), (int)enemies.size());
-        outtextxy(15, 140, s);
+        outtextxy(15, 160, s);
         
         if (enemiesToSpawn > 0) {
             _stprintf_s(s, _T("Incoming: %d"), enemiesToSpawn);
-            outtextxy(15, 160, s);
+            outtextxy(15, 180, s);
         }
     }
+}
+
+void Game::generateRandomPath() {
+    enemyPath.clear();
+    
+    // 随机选择起始边
+    int startSide = rand() % 4; // 0:左, 1:上, 2:右, 3:下
+    int endSide;
+    do {
+        endSide = rand() % 4;
+    } while (endSide == startSide); // 确保起点和终点不在同一边
+    
+    // 设置起点
+    PathPoint start, end;
+    switch (startSide) {
+        case 0: // 左边
+            start = {0, rand() % (screenHeight - 200) + 100};
+            break;
+        case 1: // 上边
+            start = {rand() % (screenWidth - 200) + 100, 0};
+            break;
+        case 2: // 右边
+            start = {screenWidth, rand() % (screenHeight - 200) + 100};
+            break;
+        case 3: // 下边
+            start = {rand() % (screenWidth - 200) + 100, screenHeight};
+            break;
+    }
+    
+    // 设置终点
+    switch (endSide) {
+        case 0: // 左边
+            end = {0, rand() % (screenHeight - 200) + 100};
+            break;
+        case 1: // 上边
+            end = {rand() % (screenWidth - 200) + 100, 0};
+            break;
+        case 2: // 右边
+            end = {screenWidth, rand() % (screenHeight - 200) + 100};
+            break;
+        case 3: // 下边
+            end = {rand() % (screenWidth - 200) + 100, screenHeight};
+            break;
+    }
+    
+    enemyPath.push_back(start);
+    
+    // 添加2-4个中间点创建弯曲路径
+    int numWaypoints = rand() % 3 + 2; // 2-4个中间点
+    PathPoint current = start;
+    
+    for (int i = 0; i < numWaypoints; i++) {
+        PathPoint waypoint;
+        waypoint.x = rand() % (screenWidth - 200) + 100;
+        waypoint.y = rand() % (screenHeight - 200) + 100;
+        
+        // 确保路径点不会太接近
+        if (abs(waypoint.x - current.x) > 100 || abs(waypoint.y - current.y) > 100) {
+            enemyPath.push_back(waypoint);
+            current = waypoint;
+        }
+    }
+    
+    enemyPath.push_back(end);
 }
