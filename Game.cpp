@@ -15,7 +15,7 @@ void putimage_alpha(int x, int y, IMAGE* img)
     AlphaBlend(GetImageHDC(NULL), x, y, w, h, GetImageHDC(img), 0, 0, w, h, { AC_SRC_OVER, 0, 255, AC_SRC_ALPHA });
 }
 
-Game::Game() : gameState(MENU), money(20000), lives(10), wave(0), enemiesToSpawn(0), spawnTimer(0){}
+Game::Game() : gameState(MENU), money(400), lives(10), wave(0), enemiesToSpawn(0), spawnTimer(0){}
 
 Game::~Game() {
     // Release all dynamically allocated memory

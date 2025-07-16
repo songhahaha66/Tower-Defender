@@ -23,7 +23,7 @@ Enemy::Enemy(int startX, int startY, int w, int h, int hp, double spd)
 
 void Enemy::loadImages() {
     if (!imagesLoaded) {
-        loadimage(&enemy1Image, _T("images/ememy1.png"));  // 注意：文件名是ememy1，不是enemy1
+        loadimage(&enemy1Image, _T("images/enemy1.png")); 
         loadimage(&enemy2Image, _T("images/enemy2.png"));
         imagesLoaded = true;
     }
