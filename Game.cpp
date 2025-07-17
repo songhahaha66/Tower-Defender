@@ -95,7 +95,8 @@ void Game::run() {
     outtextxy((screenWidth - exitTextWidth) / 2, 420, exitText);
     
     FlushBatchDraw();
-    _getch();
+    // 等待任意键按下
+    while (!_kbhit()) {}
 
     EndBatchDraw();
     closegraph();
@@ -406,87 +407,60 @@ void Game::drawPath() {
 // 绘制用户界面
 void Game::drawUI() {
     // UI背景
-    setfillcolor(RGB(0, 0, 0));
-    setcolor(RGB(100, 100, 100));
-    fillrectangle(0, 0, 200, 90);
-    rectangle(0, 0, 200, 90);
-    
-    // 游戏状态显示
+    setfillcolor(RGB(20, 20, 20));
+    setcolor(RGB(80, 80, 80));
+    fillrectangle(0, 0, 220, 200);
+    rectangle(0, 0, 220, 200);
+
+    // 金钱、生命、波数
     TCHAR s[256];
     settextcolor(RGB(255, 215, 0));
-    settextstyle(20, 0, _T("Arial"));
-
+    settextstyle(22, 0, _T("Arial"));
     _stprintf_s(s, _T("$ %d"), money);
-    outtextxy(15, 10, s);
-    
+    outtextxy(20, 15, s);
+
     settextcolor(RGB(255, 100, 100));
     _stprintf_s(s, _T("Lives: %d"), lives);
-    outtextxy(15, 35, s);
+    outtextxy(120, 15, s);
 
     settextcolor(RGB(100, 200, 255));
     _stprintf_s(s, _T("Wave: %d"), wave);
-    outtextxy(15, 60, s);
-    
+    outtextxy(20, 45, s);
+
+    // 分隔线
+    setcolor(RGB(80, 80, 80));
+    line(10, 70, 210, 70);
+
     // 敌人统计
     settextcolor(RGB(200, 200, 200));
+    settextstyle(16, 0, _T("Arial"));
     int enemyCount[5] = {0};
     for (auto& enemy : enemies) {
         if (enemy->active && enemy->enemyType >= 1 && enemy->enemyType <= 4) {
             enemyCount[enemy->enemyType]++;
         }
     }
-    
-    settextstyle(16, 0, _T("Arial"));
-    _stprintf_s(s, _T("Enemies: Normal:%d Fast:%d Heavy:%d Elite:%d"), 
-                enemyCount[1], enemyCount[2], enemyCount[3], enemyCount[4]);
-    outtextxy(15, 85, s);
-    
-    settextstyle(20, 0, _T("Arial"));
+    _stprintf_s(s, _T("Normal:%d Fast:%d Heavy:%d Elite:%d"), enemyCount[1], enemyCount[2], enemyCount[3], enemyCount[4]);
+    outtextxy(20, 80, s);
 
-    // 开始波次提示
-    if (enemiesToSpawn <= 0 && enemies.empty()) {
-        settextcolor(RGB(255, 255, 100));
-        settextstyle(32, 0, _T("Arial"));
-        
-        if (wave == 0) {
-            setfillcolor(RGB(50, 50, 50));
-            fillrectangle(200, 530, 600, 570);
-            rectangle(200, 530, 600, 570);
-            
-            outtextxy(220, 540, _T("Press SPACE to Start Game"));
-        } else {
-            setfillcolor(RGB(50, 50, 50));
-            fillrectangle(180, 530, 620, 570);
-            rectangle(180, 530, 620, 570);
-            
-            outtextxy(200, 540, _T("Press SPACE for Next Wave"));
-        }
-    }
-    
-    // 建塔提示
-    if (money >= 100) {
-        settextcolor(RGB(100, 255, 100));
-    } else {
-        settextcolor(RGB(255, 100, 100));
-    }
-    settextstyle(16, 0, _T("Arial"));
-    outtextxy(15, 100, _T("Tower Cost: $100"));
-    outtextxy(15, 120, _T("Left click to build"));
-    
-    settextcolor(RGB(200, 200, 100));
-    outtextxy(15, 140, _T("Right click to sell ($50)"));
-    
-    // 敌人数量显示
-    if (!enemies.empty()) {
-        settextcolor(RGB(255, 200, 100));
-        settextstyle(14, 0, _T("Arial"));
-        _stprintf_s(s, _T("Enemies: %d"), (int)enemies.size());
-        outtextxy(15, 160, s);
-        
-        if (enemiesToSpawn > 0) {
-            _stprintf_s(s, _T("Incoming: %d"), enemiesToSpawn);
-            outtextxy(15, 180, s);
-        }
+    // 分隔线
+    line(10, 105, 210, 105);
+
+    // 建塔/卖塔提示
+    settextcolor(money >= 100 ? RGB(100,255,100) : RGB(255,100,100));
+    _stprintf_s(s, _T("Tower: $100  (Left click)"));
+    outtextxy(20, 115, s);
+    settextcolor(RGB(200,200,100));
+    _stprintf_s(s, _T("Sell: $50  (Right click)"));
+    outtextxy(20, 135, s);
+
+    // 敌人数量/来袭
+    settextcolor(RGB(255,200,100));
+    _stprintf_s(s, _T("Enemies: %d"), (int)enemies.size());
+    outtextxy(20, 160, s);
+    if (enemiesToSpawn > 0) {
+        _stprintf_s(s, _T("Incoming: %d"), enemiesToSpawn);
+        outtextxy(20, 180, s);
     }
 }
 
