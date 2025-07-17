@@ -132,10 +132,13 @@ void Enemy::draw() {
 
 // 更新敌人位置，沿路径移动
 void Enemy::update(const std::vector<PathPoint>& path) {
-    if (!active || pathIndex >= path.size() - 1) {
-        if (pathIndex >= path.size() - 1) {
-            active = false; // 到达终点，标记为非活跃
-        }
+    if (!active) {
+        return;
+    }
+
+    // 如果已经到达或超过倒数第二个路径点，说明目标是终点
+    if (pathIndex >= path.size() - 1) {
+        active = false; // 已经完成路径，直接标记为非活跃
         return;
     }
 
@@ -149,18 +152,23 @@ void Enemy::update(const std::vector<PathPoint>& path) {
     double distance = sqrt(dx * dx + dy * dy);
 
     // 检查是否到达当前目标点
-    if (distance <= speed + 1) {
+    if (distance <= speed) {
         x = target.x - 16;
         y = target.y - 16;
         pathIndex++;
+        
+        // 如果刚刚到达了终点，立即标记为非活跃
+        if (pathIndex >= path.size() - 1) {
+            active = false;
+        }
     }
     else {
         // 按速度向目标点移动
         double moveX = speed * dx / distance;
         double moveY = speed * dy / distance;
         
-        x = static_cast<int>(x + moveX + 0.5);
-        y = static_cast<int>(y + moveY + 0.5);
+        x = static_cast<int>(x + moveX);
+        y = static_cast<int>(y + moveY);
     }
 }
 

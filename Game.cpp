@@ -16,7 +16,7 @@ void putimage_alpha(int x, int y, IMAGE* img)
 }
 
 // 游戏构造函数
-Game::Game() : gameState(MENU), money(400), lives(10), wave(0), enemiesToSpawn(0), spawnTimer(0){}
+Game::Game() : gameState(MENU), money(400), lives(1), wave(0), enemiesToSpawn(0), spawnTimer(0){}
 
 // 游戏析构函数
 Game::~Game() {
@@ -65,25 +65,34 @@ void Game::run() {
     setfillcolor(RGB(20, 20, 20));
     fillrectangle(0, 0, screenWidth, screenHeight);
     
-    settextcolor(RGB(80, 0, 0));
-    settextstyle(80, 0, _T("Arial"));
-    outtextxy(202, 252, _T("GAME OVER"));
-    
+    // 居中绘制 "GAME OVER"
     settextcolor(RGB(255, 50, 50));
-    outtextxy(200, 250, _T("GAME OVER"));
+    settextstyle(80, 0, _T("Arial"));
+    TCHAR gameOverText[] = _T("GAME OVER");
+    int gameOverWidth = textwidth(gameOverText);
+    outtextxy((screenWidth - gameOverWidth) / 2, 200, gameOverText);
     
+    // 居中绘制最终统计信息
     settextcolor(RGB(200, 200, 200));
     settextstyle(24, 0, _T("Arial"));
     TCHAR finalStats[256];
+
+    // 最终波数
     _stprintf_s(finalStats, _T("Final Wave: %d"), wave);
-    outtextxy(280, 320, finalStats);
+    int finalWaveWidth = textwidth(finalStats);
+    outtextxy((screenWidth - finalWaveWidth) / 2, 300, finalStats);
     
+    // 获得金钱
     _stprintf_s(finalStats, _T("Money Earned: $%d"), money);
-    outtextxy(260, 350, finalStats);
+    int moneyEarnedWidth = textwidth(finalStats);
+    outtextxy((screenWidth - moneyEarnedWidth) / 2, 340, finalStats);
     
+    // 居中绘制退出提示
     settextcolor(RGB(150, 150, 150));
     settextstyle(20, 0, _T("Arial"));
-    outtextxy(300, 400, _T("Press any key to exit"));
+    TCHAR exitText[] = _T("Press any key to exit");
+    int exitTextWidth = textwidth(exitText);
+    outtextxy((screenWidth - exitTextWidth) / 2, 420, exitText);
     
     FlushBatchDraw();
     _getch();
