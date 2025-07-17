@@ -114,6 +114,19 @@ void Game::handleInput() {
                 enemiesToSpawn = 5 + wave * 2;
                 spawnTimer = 60;
                 
+                // 清空所有防御塔并返还原价
+                for (auto tower : towers) {
+                    money += 100; // 返还建造费用
+                    delete tower;
+                }
+                towers.clear();
+                
+                // 清空所有子弹
+                for (auto bullet : bullets) {
+                    delete bullet;
+                }
+                bullets.clear();
+                
                 if (wave > 1) {
                     generateRandomPath();
                 }
