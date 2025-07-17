@@ -5,23 +5,24 @@
 #include <vector>
 #include <graphics.h>
 
+// 游戏主类
 class Game
 {
 public:
     Game();
     ~Game();
 
-    void run(); // 游戏主循环
+    void run();
     
 private:
     // 游戏状态枚举
     enum GameState {
-        MENU,    // 开局画面
-        PLAYING, // 游戏中
-        GAME_OVER // 游戏结束
+        MENU,
+        PLAYING,
+        GAME_OVER
     };
     
-    // 游戏窗口尺寸
+    // 窗口尺寸
     const int screenWidth = 800;
     const int screenHeight = 600;
 
@@ -29,9 +30,9 @@ private:
     std::vector<Enemy*> enemies;
     std::vector<Tower*> towers;
     std::vector<Bullet*> bullets;
-    std::vector<PathPoint> enemyPath; // 敌人移动路径
+    std::vector<PathPoint> enemyPath;
 
-    // 游戏状态
+    // 游戏状态变量
     GameState gameState;
     int money;
     int lives;
@@ -39,17 +40,17 @@ private:
     int enemiesToSpawn;
     int spawnTimer;
 
-    // Private methods
-    void init();        // Initialize game
-    void handleInput(); // Handle user input
-    void handleMenuInput(); // Handle menu input
-    void update();      // Update game state
-    void draw();        // Draw game graphics
-    void drawMenu();    // Draw menu screen
-    void spawnWave();   // Spawn enemy wave
-    void cleanup();     // Clean up inactive objects
-    void drawUI();      // Draw user interface
-    void drawBackground(); // Draw background with decorations
-    void drawPath();    // Draw enhanced enemy path
-    void generateRandomPath(); // Generate random enemy path
+    // 私有方法
+    void init();
+    void handleInput();
+    void handleMenuInput();
+    void update();
+    void draw();
+    void drawMenu();
+    void spawnWave();
+    void cleanup();
+    void drawUI();
+    void drawBackground();
+    void drawPath();
+    void generateRandomPath();
 };

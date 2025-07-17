@@ -1,20 +1,20 @@
-#pragma once // 防止头文件被重复包含
+#pragma once
 
-#include <graphics.h> // 包含 EasyX 图形库
+#include <graphics.h>
 
-// 游戏对象基类
+// 娓告垙瀵硅薄鍩虹被
 class GameObject
 {
 public:
-    int x, y; // 对象的坐标
-    int width, height; // 对象的宽高
-    bool active; // 对象是否活动/存活
+    int x, y;           // 瀵硅薄浣嶇疆
+    int width, height;  // 瀵硅薄灏哄
+    bool active;        // 鏄惁娲昏穬
 
     GameObject(int x, int y, int w, int h);
-    virtual ~GameObject(); // 虚析构函数，保证派生类对象能被正确销毁
+    virtual ~GameObject();
 
-    // 纯虚函数，要求所有派生类都必须实现自己的绘制方法
+    // 绾櫄鍑芥暟锛屾墍鏈夋淳鐢熺被蹇呴』瀹炵幇缁樺埗鏂规硶
     virtual void draw() = 0;
-    // 虚函数，派生类可以根据需要重写更新逻辑
+    // 铏氬嚱鏁帮紝娲剧敓绫诲彲鏍规嵁闇�瑕侀噸鍐欐洿鏂伴�昏緫
     virtual void update();
 };

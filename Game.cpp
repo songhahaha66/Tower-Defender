@@ -1,13 +1,13 @@
 #include "Game.h"
-#include <conio.h> // for _kbhit()
-#include <algorithm> // for std::remove_if
-#include <cmath> // for sin, sqrt
-#pragma comment(lib, "MSIMG32.LIB")  // 需要这个库来支持AlphaBlend
+#include <conio.h>
+#include <algorithm>
+#include <cmath>
+#pragma comment(lib, "MSIMG32.LIB")
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
 #endif
 
-// 显示透明图片的函数 - 完美解决黑边问题
+// 透明图片显示函数
 void putimage_alpha(int x, int y, IMAGE* img)
 {
     int w = img->getwidth();
@@ -15,29 +15,29 @@ void putimage_alpha(int x, int y, IMAGE* img)
     AlphaBlend(GetImageHDC(NULL), x, y, w, h, GetImageHDC(img), 0, 0, w, h, { AC_SRC_OVER, 0, 255, AC_SRC_ALPHA });
 }
 
+// 游戏构造函数
 Game::Game() : gameState(MENU), money(400), lives(10), wave(0), enemiesToSpawn(0), spawnTimer(0){}
 
+// 游戏析构函数
 Game::~Game() {
-    // Release all dynamically allocated memory
     for (auto p : enemies) delete p;
     for (auto p : towers) delete p;
     for (auto p : bullets) delete p;
 }
 
+// 初始化游戏
 void Game::init() {
-    // Initialize game graphics
     initgraph(screenWidth, screenHeight);
-    BeginBatchDraw(); // Enable batch drawing mode to prevent flickering
+    BeginBatchDraw();
 
-    // Load all game images
     Tower::loadImages();
     Enemy::loadImages();
     Bullet::loadImage();
 
-    // Initialize enemy movement path
-    generateRandomPath(); // 生成随机路径
+    generateRandomPath();
 }
 
+// 游戏主循环
 void Game::run() {
     init();
 
@@ -50,32 +50,28 @@ void Game::run() {
             update();
             draw();
             
-            // 检查游戏结束条件
             if (lives <= 0) {
                 gameState = GAME_OVER;
             }
         }
         
-        FlushBatchDraw(); // Flush all drawing commands to screen
-        Sleep(16); // Approximately 60 FPS
+        FlushBatchDraw();
+        Sleep(16); // 约60FPS
     }
 
-    // Enhanced game over screen
+    // 游戏结束画面
     cleardevice();
     
-    // Draw dark background
     setfillcolor(RGB(20, 20, 20));
     fillrectangle(0, 0, screenWidth, screenHeight);
     
-    // Draw "GAME OVER" with shadow effect
-    settextcolor(RGB(80, 0, 0)); // Dark red shadow
+    settextcolor(RGB(80, 0, 0));
     settextstyle(80, 0, _T("Arial"));
     outtextxy(202, 252, _T("GAME OVER"));
     
-    settextcolor(RGB(255, 50, 50)); // Bright red
+    settextcolor(RGB(255, 50, 50));
     outtextxy(200, 250, _T("GAME OVER"));
     
-    // Draw final stats
     settextcolor(RGB(200, 200, 200));
     settextstyle(24, 0, _T("Arial"));
     TCHAR finalStats[256];
@@ -90,23 +86,22 @@ void Game::run() {
     outtextxy(300, 400, _T("Press any key to exit"));
     
     FlushBatchDraw();
-    _getch(); // Wait for key press to exit
+    _getch();
 
     EndBatchDraw();
     closegraph();
 }
 
+// 处理游戏输入
 void Game::handleInput() {
-    // Use GetAsyncKeyState to detect space key press
     static bool spacePressed = false;
-    if (GetAsyncKeyState(VK_SPACE) & 0x8000) { // Check if space key is pressed
-        if (!spacePressed) { // Only trigger once per press
+    if (GetAsyncKeyState(VK_SPACE) & 0x8000) {
+        if (!spacePressed) {
             if (enemiesToSpawn <= 0 && enemies.empty()) {
                 wave++;
-                enemiesToSpawn = 5 + wave * 2; // Each wave adds 2 more enemies
-                spawnTimer = 60; // Shorter preparation time
+                enemiesToSpawn = 5 + wave * 2;
+                spawnTimer = 60;
                 
-                // 只有在wave > 1时才生成新的随机路径（第一波保持初始路径）
                 if (wave > 1) {
                     generateRandomPath();
                 }
@@ -114,44 +109,42 @@ void Game::handleInput() {
             spacePressed = true;
         }
     } else {
-        spacePressed = false; // Reset when key is released
+        spacePressed = false;
     }
 
-    // Handle mouse input for placing towers
+    // 处理鼠标输入
     MOUSEMSG m;
-    while (MouseHit()) { // Process all mouse messages
+    while (MouseHit()) {
         m = GetMouseMsg();
         if (m.uMsg == WM_LBUTTONDOWN) {
             // 左键建塔
-            if (money >= 100) { // Tower cost is 100
+            if (money >= 100) {
                 money -= 100;
-                towers.push_back(new Tower(m.x - 20, m.y - 20, 10, 150, 30)); // damage:10, range:150, cooldown:30 frames
+                towers.push_back(new Tower(m.x - 20, m.y - 20, 10, 150, 30));
             }
         } else if (m.uMsg == WM_RBUTTONDOWN) {
             // 右键卖塔
             for (auto it = towers.begin(); it != towers.end(); ++it) {
                 Tower* tower = *it;
-                // 检查鼠标点击是否在塔的范围内
                 if (m.x >= tower->x && m.x <= tower->x + tower->width &&
                     m.y >= tower->y && m.y <= tower->y + tower->height) {
-                    money += 50; // 卖塔回收一半价格
+                    money += 50;
                     delete tower;
                     towers.erase(it);
-                    break; // 只删除一个塔
+                    break;
                 }
             }
         }
     }
 }
 
+// 处理菜单输入
 void Game::handleMenuInput() {
-    // 检测鼠标点击或按键开始游戏
     if (GetAsyncKeyState(VK_SPACE) & 0x8000 || GetAsyncKeyState(VK_RETURN) & 0x8000) {
         gameState = PLAYING;
         return;
     }
     
-    // 检测鼠标点击
     MOUSEMSG m;
     while (MouseHit()) {
         m = GetMouseMsg();
@@ -162,14 +155,14 @@ void Game::handleMenuInput() {
     }
 }
 
+// 生成敌人波次
 void Game::spawnWave() {
     if (enemiesToSpawn > 0) {
         spawnTimer--;
         if (spawnTimer <= 0) {
-            // 根据当前波数和随机性生成不同类型的敌人
-            int enemyType = 1; // 默认普通敌人
+            // 根据波数生成不同类型敌人
+            int enemyType = 1;
             
-            // 随着波数增加，高级敌人出现概率增加
             int randomValue = rand() % 100;
             if (wave >= 5) {
                 if (randomValue < 10) {
@@ -199,15 +192,15 @@ void Game::spawnWave() {
             
             enemies.push_back(Enemy::createEnemy(enemyType, enemyPath[0].x, enemyPath[0].y));
             enemiesToSpawn--;
-            spawnTimer = 60; // Spawn one enemy every 60 frames
+            spawnTimer = 60;
         }
     }
 }
 
+// 更新游戏状态
 void Game::update() {
     spawnWave();
 
-    // Update towers, enemies and bullets
     for (auto& tower : towers) {
         tower->update(enemies, bullets);
     }
@@ -216,16 +209,16 @@ void Game::update() {
     }
     for (auto& enemy : enemies) {
         enemy->update(enemyPath);
-        if (!enemy->active && enemy->health > 0) { // Enemy reached end
+        if (!enemy->active && enemy->health > 0) { // 敌人到达终点
             lives--;
         }
     }
 
-    cleanup(); // Remove inactive/dead objects
+    cleanup();
 }
 
+// 清理非活跃对象
 void Game::cleanup() {
-    // Remove inactive bullets
     bullets.erase(std::remove_if(bullets.begin(), bullets.end(), [](Bullet* b) {
         if (!b->active) {
             delete b;
@@ -234,11 +227,10 @@ void Game::cleanup() {
         return false;
         }), bullets.end());
 
-    // Remove inactive enemies
     enemies.erase(std::remove_if(enemies.begin(), enemies.end(), [&](Enemy* e) {
         if (!e->active) {
-            if (e->health <= 0) { // Enemy was killed
-                money += e->getReward(); // 根据敌人类型获得不同奖励
+            if (e->health <= 0) { // 敌人被击杀
+                money += e->getReward();
             }
             delete e;
             return true;
@@ -247,52 +239,47 @@ void Game::cleanup() {
         }), enemies.end());
 }
 
+// 绘制游戏画面
 void Game::draw() {
-    cleardevice(); // Clear screen
+    cleardevice();
     
-    // Draw background gradient
     drawBackground();
-    
-    // Draw enemy path with better visual effects
     drawPath();
 
-    // Draw all game objects with enhanced effects
     for (auto& tower : towers) tower->draw();
     for (auto& enemy : enemies) enemy->draw();
     for (auto& bullet : bullets) bullet->draw();
 
-    drawUI(); // Draw UI
+    drawUI();
 }
 
+// 绘制主菜单
 void Game::drawMenu() {
     cleardevice();
     
-    // 绘制背景渐变
+    // 背景渐变
     for (int y = 0; y < screenHeight; y++) {
-        int blue = 30 + (y * 50) / screenHeight; // 蓝色渐变
+        int blue = 30 + (y * 50) / screenHeight;
         int green = 10 + (y * 20) / screenHeight;
         setlinecolor(RGB(10, green, blue));
         line(0, y, screenWidth, y);
     }
     
-    // 绘制游戏标题
-    settextcolor(RGB(255, 255, 100)); // 金黄色
+    // 游戏标题
+    settextcolor(RGB(255, 255, 100));
     settextstyle(60, 0, _T("Arial"));
     TCHAR title[] = _T("Tower Defender");
     
-    // 计算标题居中位置
     int titleWidth = textwidth(title);
     int titleX = (screenWidth - titleWidth) / 2;
     
-    // 绘制标题阴影
     settextcolor(RGB(100, 100, 50));
     outtextxy(titleX + 3, 103, title);
     
-    // 绘制标题
     settextcolor(RGB(255, 255, 100));
     outtextxy(titleX, 100, title);
     
-    // 绘制副标题
+    // 副标题
     settextcolor(RGB(200, 200, 255));
     settextstyle(24, 0, _T("Arial"));
     TCHAR subtitle[] = _T("Defend your base from enemy waves!");
@@ -300,7 +287,7 @@ void Game::drawMenu() {
     int subtitleX = (screenWidth - subtitleWidth) / 2;
     outtextxy(subtitleX, 180, subtitle);
     
-    // 绘制开始按钮框
+    // 开始按钮
     setfillcolor(RGB(50, 50, 100));
     setlinecolor(RGB(100, 100, 200));
     int buttonX = screenWidth / 2 - 150;
@@ -311,7 +298,6 @@ void Game::drawMenu() {
     fillrectangle(buttonX, buttonY, buttonX + buttonWidth, buttonY + buttonHeight);
     rectangle(buttonX, buttonY, buttonX + buttonWidth, buttonY + buttonHeight);
     
-    // 绘制开始按钮文字
     settextcolor(RGB(255, 255, 255));
     settextstyle(32, 0, _T("Arial"));
     TCHAR startText[] = _T("Start Game");
@@ -320,21 +306,20 @@ void Game::drawMenu() {
     int startY = buttonY + (buttonHeight - textheight(startText)) / 2;
     outtextxy(startX, startY, startText);
     
-    // 绘制操作说明
+    // 操作说明
     settextcolor(RGB(180, 180, 180));
     settextstyle(18, 0, _T("Arial"));
     outtextxy(250, 400, _T("Left Click: Build Tower ($100)"));
     outtextxy(250, 430, _T("Right Click: Sell Tower ($50)"));
     outtextxy(250, 460, _T("Space: Start/Next Wave"));
     
-    // 绘制提示文字
+    // 闪烁提示
     settextcolor(RGB(255, 255, 150));
     settextstyle(20, 0, _T("Arial"));
     
-    // 创建闪烁效果
     static int blinkTimer = 0;
     blinkTimer++;
-    if ((blinkTimer / 30) % 2 == 0) { // 每秒闪烁一次
+    if ((blinkTimer / 30) % 2 == 0) {
         TCHAR prompt[] = _T("Press SPACE, ENTER or Click to Start");
         int promptWidth = textwidth(prompt);
         int promptX = (screenWidth - promptWidth) / 2;
@@ -342,32 +327,32 @@ void Game::drawMenu() {
     }
 }
 
+// 绘制背景
 void Game::drawBackground() {
-    // Create a gradient background
+    // 渐变背景
     for (int y = 0; y < screenHeight; y++) {
-        int green = 20 + (y * 30) / screenHeight; // Gradient from dark to light green
+        int green = 20 + (y * 30) / screenHeight;
         setlinecolor(RGB(10, green, 10));
         line(0, y, screenWidth, y);
     }
     
-    // Draw some decorative elements
-    setfillcolor(RGB(34, 139, 34)); // Forest green
+    // 装饰性元素
+    setfillcolor(RGB(34, 139, 34));
     
-    // Draw trees/bushes randomly
     for (int i = 0; i < 15; i++) {
         int x = (i * 73 + 50) % (screenWidth - 40);
         int y = (i * 97 + 80) % (screenHeight - 60);
         
-        // Draw a simple tree
-        fillcircle(x, y, 8 + i % 5); // Tree crown
-        setfillcolor(RGB(101, 67, 33)); // Brown
-        fillrectangle(x - 2, y + 5, x + 2, y + 15); // Tree trunk
-        setfillcolor(RGB(34, 139, 34)); // Reset to green
+        fillcircle(x, y, 8 + i % 5);
+        setfillcolor(RGB(101, 67, 33));
+        fillrectangle(x - 2, y + 5, x + 2, y + 15);
+        setfillcolor(RGB(34, 139, 34));
     }
 }
 
+// 绘制敌人路径
 void Game::drawPath() {
-    // Draw path shadow first
+    // 路径阴影
     setlinecolor(RGB(80, 60, 40));
     setlinestyle(PS_SOLID, 25);
     for (size_t i = 0; i < enemyPath.size() - 1; ++i) {
@@ -375,18 +360,17 @@ void Game::drawPath() {
              enemyPath[i + 1].x + 2, enemyPath[i + 1].y + 2);
     }
     
-    // Draw main path
-    setlinecolor(RGB(139, 119, 101)); // Sandy brown
+    // 主路径
+    setlinecolor(RGB(139, 119, 101));
     setlinestyle(PS_SOLID, 20);
     for (size_t i = 0; i < enemyPath.size() - 1; ++i) {
         line(enemyPath[i].x, enemyPath[i].y, enemyPath[i + 1].x, enemyPath[i + 1].y);
     }
     
-    // Draw path borders
+    // 路径边框
     setlinecolor(RGB(160, 140, 120));
     setlinestyle(PS_SOLID, 2);
     for (size_t i = 0; i < enemyPath.size() - 1; ++i) {
-        // Calculate perpendicular offset for borders
         int dx = enemyPath[i + 1].x - enemyPath[i].x;
         int dy = enemyPath[i + 1].y - enemyPath[i].y;
         double length = sqrt(dx * dx + dy * dy);
@@ -394,50 +378,49 @@ void Game::drawPath() {
             int offsetX = (int)(-dy * 10 / length);
             int offsetY = (int)(dx * 10 / length);
             
-            // Top border
             line(enemyPath[i].x + offsetX, enemyPath[i].y + offsetY,
                  enemyPath[i + 1].x + offsetX, enemyPath[i + 1].y + offsetY);
-            // Bottom border
             line(enemyPath[i].x - offsetX, enemyPath[i].y - offsetY,
                  enemyPath[i + 1].x - offsetX, enemyPath[i + 1].y - offsetY);
         }
     }
     
-    // Draw waypoint markers
-    setfillcolor(RGB(255, 215, 0)); // Gold
+    // 路径点标记
+    setfillcolor(RGB(255, 215, 0));
     for (size_t i = 0; i < enemyPath.size(); ++i) {
         fillcircle(enemyPath[i].x, enemyPath[i].y, 3);
     }
     
-    setlinestyle(PS_SOLID, 1); // Restore default line style
+    setlinestyle(PS_SOLID, 1);
 }
 
+// 绘制用户界面
 void Game::drawUI() {
-    // Draw semi-transparent UI background
+    // UI背景
     setfillcolor(RGB(0, 0, 0));
     setcolor(RGB(100, 100, 100));
     fillrectangle(0, 0, 200, 90);
     rectangle(0, 0, 200, 90);
     
-    // Draw game stats with better formatting
+    // 游戏状态显示
     TCHAR s[256];
-    settextcolor(RGB(255, 215, 0)); // Gold color
+    settextcolor(RGB(255, 215, 0));
     settextstyle(20, 0, _T("Arial"));
 
     _stprintf_s(s, _T("$ %d"), money);
     outtextxy(15, 10, s);
     
-    settextcolor(RGB(255, 100, 100)); // Light red
+    settextcolor(RGB(255, 100, 100));
     _stprintf_s(s, _T("Lives: %d"), lives);
     outtextxy(15, 35, s);
 
-    settextcolor(RGB(100, 200, 255)); // Light blue
+    settextcolor(RGB(100, 200, 255));
     _stprintf_s(s, _T("Wave: %d"), wave);
     outtextxy(15, 60, s);
     
-    // 显示当前存活的敌人类型统计
-    settextcolor(RGB(200, 200, 200)); // Light gray
-    int enemyCount[5] = {0}; // 索引0不使用，1-4对应敌人类型
+    // 敌人统计
+    settextcolor(RGB(200, 200, 200));
+    int enemyCount[5] = {0};
     for (auto& enemy : enemies) {
         if (enemy->active && enemy->enemyType >= 1 && enemy->enemyType <= 4) {
             enemyCount[enemy->enemyType]++;
@@ -449,29 +432,20 @@ void Game::drawUI() {
                 enemyCount[1], enemyCount[2], enemyCount[3], enemyCount[4]);
     outtextxy(15, 85, s);
     
-    // 恢复字体大小
     settextstyle(20, 0, _T("Arial"));
 
-    // Draw enhanced start game prompt
+    // 开始波次提示
     if (enemiesToSpawn <= 0 && enemies.empty()) {
-        // Draw glowing effect for the prompt
-        settextcolor(RGB(255, 255, 100)); // Bright yellow
+        settextcolor(RGB(255, 255, 100));
         settextstyle(32, 0, _T("Arial"));
         
-        // Create a pulsing effect
-        static int pulseTimer = 0;
-        pulseTimer++;
-        int alpha = 150 + (int)(50 * sin(pulseTimer * 0.1));
-        
         if (wave == 0) {
-            // Draw background box for text
             setfillcolor(RGB(50, 50, 50));
             fillrectangle(200, 530, 600, 570);
             rectangle(200, 530, 600, 570);
             
             outtextxy(220, 540, _T("Press SPACE to Start Game"));
         } else {
-            // Draw background box for text
             setfillcolor(RGB(50, 50, 50));
             fillrectangle(180, 530, 620, 570);
             rectangle(180, 530, 620, 570);
@@ -480,21 +454,20 @@ void Game::drawUI() {
         }
     }
     
-    // Draw tower cost indicator
+    // 建塔提示
     if (money >= 100) {
-        settextcolor(RGB(100, 255, 100)); // Green
+        settextcolor(RGB(100, 255, 100));
     } else {
-        settextcolor(RGB(255, 100, 100)); // Red
+        settextcolor(RGB(255, 100, 100));
     }
     settextstyle(16, 0, _T("Arial"));
     outtextxy(15, 100, _T("Tower Cost: $100"));
     outtextxy(15, 120, _T("Left click to build"));
     
-    // 卖塔说明
     settextcolor(RGB(200, 200, 100));
     outtextxy(15, 140, _T("Right click to sell ($50)"));
     
-    // Draw mini map or game status
+    // 敌人数量显示
     if (!enemies.empty()) {
         settextcolor(RGB(255, 200, 100));
         settextstyle(14, 0, _T("Arial"));
@@ -508,17 +481,18 @@ void Game::drawUI() {
     }
 }
 
+// 生成随机敌人路径
 void Game::generateRandomPath() {
     enemyPath.clear();
     
-    // 随机选择起始边
+    // 随机选择起始和结束边
     int startSide = rand() % 4; // 0:左, 1:上, 2:右, 3:下
     int endSide;
     do {
         endSide = rand() % 4;
-    } while (endSide == startSide); // 确保起点和终点不在同一边
+    } while (endSide == startSide);
     
-    // 设置起点
+    // 设置起点和终点
     PathPoint start, end;
     switch (startSide) {
         case 0: // 左边
@@ -535,7 +509,6 @@ void Game::generateRandomPath() {
             break;
     }
     
-    // 设置终点
     switch (endSide) {
         case 0: // 左边
             end = {0, rand() % (screenHeight - 200) + 100};
@@ -553,7 +526,7 @@ void Game::generateRandomPath() {
     
     enemyPath.push_back(start);
     
-    // 添加2-4个中间点创建弯曲路径
+    // 添加中间路径点
     int numWaypoints = rand() % 3 + 2; // 2-4个中间点
     PathPoint current = start;
     
@@ -562,7 +535,6 @@ void Game::generateRandomPath() {
         waypoint.x = rand() % (screenWidth - 200) + 100;
         waypoint.y = rand() % (screenHeight - 200) + 100;
         
-        // 确保路径点不会太接近
         if (abs(waypoint.x - current.x) > 100 || abs(waypoint.y - current.y) > 100) {
             enemyPath.push_back(waypoint);
             current = waypoint;
