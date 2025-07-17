@@ -166,7 +166,38 @@ void Game::spawnWave() {
     if (enemiesToSpawn > 0) {
         spawnTimer--;
         if (spawnTimer <= 0) {
-            enemies.push_back(new Enemy(enemyPath[0].x, enemyPath[0].y, 30, 30, 50 + wave * 10, 2.0 + wave * 0.1));
+            // 根据当前波数和随机性生成不同类型的敌人
+            int enemyType = 1; // 默认普通敌人
+            
+            // 随着波数增加，高级敌人出现概率增加
+            int randomValue = rand() % 100;
+            if (wave >= 5) {
+                if (randomValue < 10) {
+                    enemyType = 4; // 10% 精英敌人
+                } else if (randomValue < 30) {
+                    enemyType = 3; // 20% 重甲敌人
+                } else if (randomValue < 60) {
+                    enemyType = 2; // 30% 快速敌人
+                } else {
+                    enemyType = 1; // 40% 普通敌人
+                }
+            } else if (wave >= 3) {
+                if (randomValue < 5) {
+                    enemyType = 3; // 5% 重甲敌人
+                } else if (randomValue < 40) {
+                    enemyType = 2; // 35% 快速敌人
+                } else {
+                    enemyType = 1; // 60% 普通敌人
+                }
+            } else {
+                if (randomValue < 30) {
+                    enemyType = 2; // 30% 快速敌人
+                } else {
+                    enemyType = 1; // 70% 普通敌人
+                }
+            }
+            
+            enemies.push_back(Enemy::createEnemy(enemyType, enemyPath[0].x, enemyPath[0].y));
             enemiesToSpawn--;
             spawnTimer = 60; // Spawn one enemy every 60 frames
         }
@@ -207,7 +238,7 @@ void Game::cleanup() {
     enemies.erase(std::remove_if(enemies.begin(), enemies.end(), [&](Enemy* e) {
         if (!e->active) {
             if (e->health <= 0) { // Enemy was killed
-                money += 10; // Add money reward
+                money += e->getReward(); // 根据敌人类型获得不同奖励
             }
             delete e;
             return true;
@@ -403,6 +434,23 @@ void Game::drawUI() {
     settextcolor(RGB(100, 200, 255)); // Light blue
     _stprintf_s(s, _T("Wave: %d"), wave);
     outtextxy(15, 60, s);
+    
+    // 显示当前存活的敌人类型统计
+    settextcolor(RGB(200, 200, 200)); // Light gray
+    int enemyCount[5] = {0}; // 索引0不使用，1-4对应敌人类型
+    for (auto& enemy : enemies) {
+        if (enemy->active && enemy->enemyType >= 1 && enemy->enemyType <= 4) {
+            enemyCount[enemy->enemyType]++;
+        }
+    }
+    
+    settextstyle(16, 0, _T("Arial"));
+    _stprintf_s(s, _T("Enemies: Normal:%d Fast:%d Heavy:%d Elite:%d"), 
+                enemyCount[1], enemyCount[2], enemyCount[3], enemyCount[4]);
+    outtextxy(15, 85, s);
+    
+    // 恢复字体大小
+    settextstyle(20, 0, _T("Arial"));
 
     // Draw enhanced start game prompt
     if (enemiesToSpawn <= 0 && enemies.empty()) {
