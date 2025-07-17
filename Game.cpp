@@ -16,7 +16,7 @@ void putimage_alpha(int x, int y, IMAGE* img)
 }
 
 // 游戏构造函数
-Game::Game() : gameState(MENU), money(400), lives(1), wave(0), enemiesToSpawn(0), spawnTimer(0){}
+Game::Game() : gameState(MENU), money(400), lives(5), wave(0), enemiesToSpawn(0), spawnTimer(0){}
 
 // 游戏析构函数
 Game::~Game() {
@@ -90,13 +90,15 @@ void Game::run() {
     // 居中绘制退出提示
     settextcolor(RGB(150, 150, 150));
     settextstyle(20, 0, _T("Arial"));
-    TCHAR exitText[] = _T("Press any key to exit");
+    TCHAR exitText[] = _T("Press Space to exit");
     int exitTextWidth = textwidth(exitText);
     outtextxy((screenWidth - exitTextWidth) / 2, 420, exitText);
     
     FlushBatchDraw();
     // 等待任意键按下
-    while (!_kbhit()) {}
+    while (!GetAsyncKeyState(VK_SPACE)) {
+        Sleep(100); 
+    }
 
     EndBatchDraw();
     closegraph();
