@@ -53,6 +53,9 @@ void Game::run() {
             if (lives <= 0) {
                 gameState = GAME_OVER;
             }
+        } else if (gameState == WAVE_COMPLETE) {
+            handleWaveCompleteInput();
+            drawWaveComplete();
         }
         
         FlushBatchDraw();
@@ -110,26 +113,7 @@ void Game::handleInput() {
     if (GetAsyncKeyState(VK_SPACE) & 0x8000) {
         if (!spacePressed) {
             if (enemiesToSpawn <= 0 && enemies.empty()) {
-                wave++;
-                enemiesToSpawn = 5 + wave * 2;
-                spawnTimer = 60;
-                
-                // 清空所有防御塔并返还原价
-                for (auto tower : towers) {
-                    money += 100; // 返还建造费用
-                    delete tower;
-                }
-                towers.clear();
-                
-                // 清空所有子弹
-                for (auto bullet : bullets) {
-                    delete bullet;
-                }
-                bullets.clear();
-                
-                if (wave > 1) {
-                    generateRandomPath();
-                }
+                gameState = WAVE_COMPLETE; // 切换到关卡完成状态
             }
             spacePressed = true;
         }
@@ -175,6 +159,67 @@ void Game::handleMenuInput() {
         m = GetMouseMsg();
         if (m.uMsg == WM_LBUTTONDOWN) {
             gameState = PLAYING;
+            return;
+        }
+    }
+}
+
+// 处理关卡完成输入
+void Game::handleWaveCompleteInput() {
+    if (GetAsyncKeyState(VK_SPACE) & 0x8000 || GetAsyncKeyState(VK_RETURN) & 0x8000) {
+        // 进入下一关
+        wave++;
+        enemiesToSpawn = 5 + wave * 2;
+        spawnTimer = 60;
+        
+        // 清空所有防御塔并返还原价
+        for (auto tower : towers) {
+            money += 100; // 返还建造费用
+            delete tower;
+        }
+        towers.clear();
+        
+        // 清空所有子弹
+        for (auto bullet : bullets) {
+            delete bullet;
+        }
+        bullets.clear();
+        
+        if (wave > 1) {
+            generateRandomPath();
+        }
+        
+        gameState = PLAYING; // 返回游戏状态
+        return;
+    }
+    
+    MOUSEMSG m;
+    while (MouseHit()) {
+        m = GetMouseMsg();
+        if (m.uMsg == WM_LBUTTONDOWN) {
+            // 进入下一关
+            wave++;
+            enemiesToSpawn = 5 + wave * 2;
+            spawnTimer = 60;
+            
+            // 清空所有防御塔并返还原价
+            for (auto tower : towers) {
+                money += 100; // 返还建造费用
+                delete tower;
+            }
+            towers.clear();
+            
+            // 清空所有子弹
+            for (auto bullet : bullets) {
+                delete bullet;
+            }
+            bullets.clear();
+            
+            if (wave > 1) {
+                generateRandomPath();
+            }
+            
+            gameState = PLAYING; // 返回游戏状态
             return;
         }
     }
@@ -240,6 +285,11 @@ void Game::update() {
     }
 
     cleanup();
+    
+    // 检查关卡是否完成
+    if (enemiesToSpawn <= 0 && enemies.empty() && gameState == PLAYING) {
+        gameState = WAVE_COMPLETE;
+    }
 }
 
 // 清理非活跃对象
@@ -540,4 +590,89 @@ void Game::generateRandomPath() {
     }
     
     enemyPath.push_back(end);
+}
+
+// 绘制关卡完成界面
+void Game::drawWaveComplete() {
+    cleardevice();
+    
+    // 背景渐变
+    for (int y = 0; y < screenHeight; y++) {
+        int green = 30 + (y * 40) / screenHeight;
+        int blue = 20 + (y * 30) / screenHeight;
+        setlinecolor(RGB(10, green, blue));
+        line(0, y, screenWidth, y);
+    }
+    
+    // 关卡完成标题
+    settextcolor(RGB(100, 255, 100));
+    settextstyle(60, 0, _T("Arial"));
+    TCHAR waveCompleteText[] = _T("WAVE COMPLETE!");
+    int waveCompleteWidth = textwidth(waveCompleteText);
+    
+    // 标题阴影效果
+    settextcolor(RGB(50, 150, 50));
+    outtextxy((screenWidth - waveCompleteWidth) / 2 + 3, 103, waveCompleteText);
+    
+    settextcolor(RGB(100, 255, 100));
+    outtextxy((screenWidth - waveCompleteWidth) / 2, 100, waveCompleteText);
+    
+    // 当前关卡信息
+    settextcolor(RGB(255, 255, 150));
+    settextstyle(32, 0, _T("Arial"));
+    TCHAR waveInfo[256];
+    _stprintf_s(waveInfo, _T("Wave %d Completed!"), wave);
+    int waveInfoWidth = textwidth(waveInfo);
+    outtextxy((screenWidth - waveInfoWidth) / 2, 180, waveInfo);
+    
+    // 奖励信息
+    settextcolor(RGB(255, 215, 0));
+    settextstyle(24, 0, _T("Arial"));
+    int towerRefund = (int)towers.size() * 100;
+    _stprintf_s(waveInfo, _T("Tower Refund: $%d"), towerRefund);
+    int refundWidth = textwidth(waveInfo);
+    outtextxy((screenWidth - refundWidth) / 2, 230, waveInfo);
+    
+    _stprintf_s(waveInfo, _T("Current Money: $%d"), money);
+    int moneyWidth = textwidth(waveInfo);
+    outtextxy((screenWidth - moneyWidth) / 2, 260, waveInfo);
+    
+    // 下一关预告
+    settextcolor(RGB(200, 200, 255));
+    settextstyle(20, 0, _T("Arial"));
+    _stprintf_s(waveInfo, _T("Next Wave: %d enemies incoming"), 5 + (wave + 1) * 2);
+    int nextWaveWidth = textwidth(waveInfo);
+    outtextxy((screenWidth - nextWaveWidth) / 2, 320, waveInfo);
+    
+    // 继续按钮
+    setfillcolor(RGB(50, 100, 50));
+    setlinecolor(RGB(100, 200, 100));
+    int buttonX = screenWidth / 2 - 150;
+    int buttonY = 380;
+    int buttonWidth = 300;
+    int buttonHeight = 60;
+    
+    fillrectangle(buttonX, buttonY, buttonX + buttonWidth, buttonY + buttonHeight);
+    rectangle(buttonX, buttonY, buttonX + buttonWidth, buttonY + buttonHeight);
+    
+    settextcolor(RGB(255, 255, 255));
+    settextstyle(28, 0, _T("Arial"));
+    TCHAR continueText[] = _T("Continue to Next Wave");
+    int continueWidth = textwidth(continueText);
+    int continueX = buttonX + (buttonWidth - continueWidth) / 2;
+    int continueY = buttonY + (buttonHeight - textheight(continueText)) / 2;
+    outtextxy(continueX, continueY, continueText);
+    
+    // 闪烁提示
+    settextcolor(RGB(255, 255, 150));
+    settextstyle(18, 0, _T("Arial"));
+    
+    static int blinkTimer = 0;
+    blinkTimer++;
+    if ((blinkTimer / 30) % 2 == 0) {
+        TCHAR prompt[] = _T("Press SPACE, ENTER or Click to Continue");
+        int promptWidth = textwidth(prompt);
+        int promptX = (screenWidth - promptWidth) / 2;
+        outtextxy(promptX, 480, prompt);
+    }
 }

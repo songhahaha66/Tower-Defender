@@ -19,6 +19,7 @@ private:
     enum GameState {
         MENU,
         PLAYING,
+        WAVE_COMPLETE,
         GAME_OVER
     };
     
@@ -44,9 +45,11 @@ private:
     void init();
     void handleInput();
     void handleMenuInput();
+    void handleWaveCompleteInput();
     void update();
     void draw();
     void drawMenu();
+    void drawWaveComplete();
     void spawnWave();
     void cleanup();
     void drawUI();
