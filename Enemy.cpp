@@ -12,7 +12,7 @@ bool Enemy::imagesLoaded = false;
 
 // 敌人构造函数
 Enemy::Enemy(int startX, int startY, int w, int h, int hp, double spd, int type, int gold)
-    : GameObject(startX, startY, w, h), health(hp), maxHealth(hp), speed(spd), pathIndex(0), enemyType(type), reward(gold) {
+    : GameObject(startX, startY, w, h), health(hp), maxHealth(hp), speed(spd), pathIndex(0), enemyType(type), reward(gold), preciseX(startX), preciseY(startY) {
     
     if (!imagesLoaded) {
         loadImages();
@@ -41,10 +41,12 @@ Enemy* Enemy::createEnemy(int type, int startX, int startY) {
             break;
     }
     
-    // 设置敌人位置，使其中心对齐到起始点
+    // 设置敌人位置，敌人中心对齐到路径点
     if (enemy) {
-        enemy->x = startX - 16;
-        enemy->y = startY - 16;
+        enemy->preciseX = startX; // 敌人中心在路径点上
+        enemy->preciseY = startY;
+        enemy->x = (int)enemy->preciseX;
+        enemy->y = (int)enemy->preciseY;
     }
     
     return enemy;
@@ -85,14 +87,14 @@ void Enemy::draw() {
             break;
     }
     
-    // 绘制敌人图片
+    // 绘制敌人图片 (中心点对齐到路径)
     if (currentImage) {
-        putimage_alpha(x, y, currentImage);
+        putimage_alpha(x-32, y-32, currentImage);
     }
 
-    // 绘制血条背景
+    // 绘制血条背景 (基于中心点坐标)
     setfillcolor(RGB(50, 50, 50));
-    fillrectangle(x + 16 , y + 8, x + 16 + 32, y + 16 - 3);
+    fillrectangle(x - 16, y - 24, x + 16, y - 19);
     
     // 根据血量设置血条颜色
     double healthRatio = (double)health / maxHealth;
@@ -107,7 +109,7 @@ void Enemy::draw() {
     
     // 绘制当前血量
     setfillcolor(healthColor);
-    fillrectangle(x + 16, y + 16 - 8, x + 16  + (int)(32 * healthRatio), y + 16 - 3);
+    fillrectangle(x - 16, y - 24, x - 16 + (int)(32 * healthRatio), y - 19);
     
     // 根据敌人类型绘制不同颜色边框
     switch (enemyType) {
@@ -127,49 +129,43 @@ void Enemy::draw() {
             setlinecolor(RGB(255, 255, 255));
             break;
     }
-    rectangle(x +16, y +16, x + 32 +16, y + 32 +16);
+    rectangle(x - 16, y - 16, x + 16, y + 16);
 }
 
-// 更新敌人位置，沿路径移动
+// 更新敌人位置，精确按路径移动
 void Enemy::update(const std::vector<PathPoint>& path) {
-    if (!active) {
+    if (!active || path.empty()) {
         return;
     }
 
-    // 如果已经到达或超过倒数第二个路径点，说明目标是终点
+    // 如果已经到达终点
     if (pathIndex >= path.size() - 1) {
-        active = false; // 已经完成路径，直接标记为非活跃
+        active = false;
         return;
     }
 
     PathPoint target = path[pathIndex + 1];
     
-    // 计算敌人中心点到目标点的距离
-    double centerX = x + 16;
-    double centerY = y + 16;
-    double dx = target.x - centerX;
-    double dy = target.y - centerY;
+    // 计算敌人中心点到目标点的距离和方向（现在preciseX,preciseY就是中心点）
+    double dx = target.x - preciseX;
+    double dy = target.y - preciseY;
     double distance = sqrt(dx * dx + dy * dy);
 
-    // 检查是否到达当前目标点
+    // 如果距离小于等于速度，直接移动到目标点
     if (distance <= speed) {
-        x = target.x - 16;
-        y = target.y - 16;
+        preciseX = target.x; // 敌人中心对齐到路径点
+        preciseY = target.y;
         pathIndex++;
-        
-        // 如果刚刚到达了终点，立即标记为非活跃
-        if (pathIndex >= path.size() - 1) {
-            active = false;
-        }
+    } else {
+        // 按比例移动，保持浮点精度
+        double ratio = speed / distance;
+        preciseX += dx * ratio;
+        preciseY += dy * ratio;
     }
-    else {
-        // 按速度向目标点移动
-        double moveX = speed * dx / distance;
-        double moveY = speed * dy / distance;
-        
-        x = static_cast<int>(x + moveX);
-        y = static_cast<int>(y + moveY);
-    }
+    
+    // 更新整数坐标用于绘制
+    x = (int)preciseX;
+    y = (int)preciseY;
 }
 
 // 敌人受到伤害

@@ -19,6 +19,9 @@ public:
     int reward;
     int enemyType;
     
+    // 精确坐标，避免整数转换误差
+    double preciseX, preciseY;
+    
     static IMAGE enemy1Image;
     static IMAGE enemy2Image;
     static IMAGE enemy3Image;
