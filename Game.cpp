@@ -150,6 +150,10 @@ void Game::handleInput() {
 // 处理菜单输入
 void Game::handleMenuInput() {
     if (GetAsyncKeyState(VK_SPACE) & 0x8000 || GetAsyncKeyState(VK_RETURN) & 0x8000) {
+        // 初始化第一波（wave=0）
+        wave = 0;
+        enemiesToSpawn = 5 + wave * 2; // 第0波5个敌人
+        spawnTimer = 60;
         gameState = PLAYING;
         return;
     }
@@ -158,6 +162,10 @@ void Game::handleMenuInput() {
     while (MouseHit()) {
         m = GetMouseMsg();
         if (m.uMsg == WM_LBUTTONDOWN) {
+            // 初始化第一波（wave=0）
+            wave = 0;
+            enemiesToSpawn = 5 + wave * 2; // 第0波5个敌人
+            spawnTimer = 60;
             gameState = PLAYING;
             return;
         }
@@ -288,7 +296,29 @@ void Game::update() {
     
     // 检查关卡是否完成
     if (enemiesToSpawn <= 0 && enemies.empty() && gameState == PLAYING) {
-        gameState = WAVE_COMPLETE;
+        if (wave == 0) {
+            // 第0波完成后直接进入下一波，不显示关卡完成界面
+            wave++;
+            enemiesToSpawn = 5 + wave * 2;
+            spawnTimer = 60;
+            
+            // 清空所有防御塔并返还原价
+            for (auto tower : towers) {
+                money += 100; // 返还建造费用
+                delete tower;
+            }
+            towers.clear();
+            
+            // 清空所有子弹
+            for (auto bullet : bullets) {
+                delete bullet;
+            }
+            bullets.clear();
+            
+            generateRandomPath();
+        } else {
+            gameState = WAVE_COMPLETE;
+        }
     }
 }
 
